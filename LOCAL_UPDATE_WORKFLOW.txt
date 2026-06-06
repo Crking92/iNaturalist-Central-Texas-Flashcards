@@ -1,0 +1,18 @@
+LOCAL DESKTOP UPDATE WORKFLOW
+
+Keep this whole folder on your Desktop.
+
+When you want new iNaturalist updates:
+
+1. Open a terminal inside KEEP_ON_DESKTOP_UPDATE_FOLDER.
+2. Run:
+
+   python daily_fetch.py
+
+3. After it finishes, upload these files from this local folder to GitHub:
+
+   data/daily_data.js
+   data/master_plants.json
+   data/host_numbers.csv
+
+Do not mix this dashboard master_plants.json with your larger master plant list. This folder is only for the flashcard dashboard.
