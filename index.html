@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ecotone Native Plant Dashboard</title>
+  <style>
+    :root {
+      --bg: #f4f6f3;
+      --card: #ffffff;
+      --ink: #243126;
+      --muted: #607064;
+      --accent: #3f6848;
+      --accent-2: #e6efe8;
+      --line: #ccd8cf;
+      --warn: #8a5a00;
+      --bad: #9e2f2f;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 18px;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--ink);
+    }
+    .wrap { max-width: 980px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 16px; }
+    h1 { margin: 0 0 6px; color: var(--accent); font-size: clamp(1.8rem, 5vw, 2.6rem); }
+    .sub { color: var(--muted); font-size: 0.95rem; }
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 6px 18px rgba(20, 40, 25, 0.06);
+      margin-bottom: 16px;
+    }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    input, select, button {
+      font: inherit;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--ink);
+    }
+    input { flex: 1 1 260px; }
+    button { cursor: pointer; background: var(--accent); color: #fff; border-color: var(--accent); }
+    button.secondary { background: #fff; color: var(--accent); }
+    button.warning { background: var(--warn); border-color: var(--warn); }
+    button.bad { background: var(--bad); border-color: var(--bad); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin-top: 12px;
+    }
+    .stat {
+      background: var(--accent-2);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: center;
+    }
+    .stat b { display: block; font-size: 1.45rem; color: var(--accent); }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 12px;
+    }
+    .plant-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .plant-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(20, 40, 25, 0.09); }
+    .thumb { height: 145px; width: 100%; object-fit: cover; background: #e8ece8; display: block; }
+    .plant-card .body { padding: 12px; }
+    .sci { font-style: italic; font-weight: 700; margin-bottom: 4px; }
+    .common { color: var(--muted); margin-bottom: 8px; }
+    .tag { display: inline-block; background: var(--accent-2); border-radius: 999px; padding: 3px 8px; font-size: 0.82rem; margin: 2px 4px 2px 0; }
+    #study { display: none; }
+    .study-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 360px); gap: 16px; align-items: start; }
+    .hero-img {
+      width: 100%; height: min(62vh, 540px); object-fit: contain; background: #e8ece8;
+      border-radius: 16px; border: 1px solid var(--line);
+    }
+    .info h2 { margin: 0; font-style: italic; }
+    .info h3 { margin: 4px 0 12px; color: var(--muted); font-weight: 500; }
+    .detail { margin: 9px 0; }
+    .detail b { color: var(--accent); }
+    .photo-note { color: var(--muted); font-size: 0.85rem; margin-top: 8px; min-height: 1.2em; }
+    .error { background: #fff4f4; border-color: #e3b8b8; color: #7a1d1d; }
+    .hidden { display: none; }
+    @media (max-width: 760px) {
+      .study-layout { grid-template-columns: 1fr; }
+      .hero-img { height: 380px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Ecotone Native Plant Dashboard</h1>
+      <div class="sub" id="status">Loading plant database...</div>
+    </header>
+
+    <section id="home">
+      <div class="panel">
+        <div class="row">
+          <input id="search" type="search" placeholder="Search scientific name, common name, family, or trait...">
+          <select id="familyFilter"><option value="">All families</option></select>
+          <button id="shuffleBtn" type="button">Shuffle</button>
+          <button id="resetBtn" type="button" class="secondary">Reset filters</button>
+        </div>
+        <div class="stats">
+          <div class="stat"><b id="totalCount">0</b>Total plants</div>
+          <div class="stat"><b id="shownCount">0</b>Shown now</div>
+          <div class="stat"><b id="knownCount">0</b>Knew it</div>
+          <div class="stat"><b id="missedCount">0</b>Needs practice</div>
+        </div>
+      </div>
+      <div id="loadError" class="panel error hidden"></div>
+      <div id="grid" class="grid"></div>
+    </section>
+
+    <section id="study">
+      <div class="panel row">
+        <button id="backBtn" type="button" class="secondary">Back to list</button>
+        <button id="prevBtn" type="button" class="secondary">Previous</button>
+        <button id="nextBtn" type="button">Next</button>
+        <button id="missBtn" type="button" class="bad">Needs practice</button>
+        <button id="knowBtn" type="button">Knew it</button>
+        <span id="position" class="sub"></span>
+      </div>
+      <div class="study-layout">
+        <div>
+          <img id="hero" class="hero-img" alt="Plant photo">
+          <div class="photo-note" id="photoNote"></div>
+        </div>
+        <div class="panel info">
+          <h2 id="sciName"></h2>
+          <h3 id="commonName"></h3>
+          <div id="details"></div>
+          <div class="row" style="margin-top: 14px;">
+            <button id="photoPrev" type="button" class="secondary">Photo -</button>
+            <button id="photoNext" type="button" class="secondary">Photo +</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="data/daily_data.js"></script>
+  <script>
+    const STORAGE_KEY = 'ecotoneNativePlantStatsV2';
+    let plants = [];
+    let shown = [];
+    let currentIndex = 0;
+    let photoIndex = 0;
+    let stats = {};
+
+    const el = id => document.getElementById(id);
+
+    function safeText(value) {
+      return (value === undefined || value === null || value === '') ? 'Not listed' : String(value);
+    }
+
+    function noPhotoSvg(message) {
+      const clean = encodeURIComponent(message);
+      return `data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='600'%3E%3Crect width='100%25' height='100%25' fill='%23e8ece8'/%3E%3Ctext x='50%25' y='50%25' fill='%23607064' font-family='sans-serif' font-size='28' text-anchor='middle' dominant-baseline='middle'%3E${clean}%3C/text%3E%3C/svg%3E`;
+    }
+
+    function loadStats() {
+      try { stats = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); }
+      catch { stats = {}; }
+    }
+
+    function saveStats() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stats));
+      updateStatsDisplay();
+    }
+
+    function normalizeRecord(name, record) {
+      return {
+        name,
+        common_name: record.common_name || 'Unknown common name',
+        family: record.family || 'Unknown family',
+        lepidoptera: Number(record.lepidoptera || 0),
+        date_added: record.date_added || 'Unknown date',
+        traits: record.traits || {},
+        photos: Array.isArray(record.photos) ? record.photos : []
+      };
+    }
+
+    function init() {
+      loadStats();
+      if (typeof plantData === 'undefined') {
+        showLoadError('Could not find data/daily_data.js. Make sure the data folder is next to index.html.');
+        return;
+      }
+      plants = Object.entries(plantData).map(([name, record]) => normalizeRecord(name, record));
+      plants.sort((a, b) => a.name.localeCompare(b.name));
+      populateFamilies();
+      wireEvents();
+      applyFilters();
+      el('status').textContent = `Loaded ${plants.length} plants from data/daily_data.js`;
+    }
+
+    function showLoadError(message) {
+      el('status').textContent = 'Database failed to load';
+      const box = el('loadError');
+      box.textContent = message;
+      box.classList.remove('hidden');
+    }
+
+    function populateFamilies() {
+      const families = [...new Set(plants.map(p => p.family).filter(Boolean))].sort();
+      const select = el('familyFilter');
+      families.forEach(family => {
+        const option = document.createElement('option');
+        option.value = family;
+        option.textContent = family;
+        select.appendChild(option);
+      });
+    }
+
+    function wireEvents() {
+      el('search').addEventListener('input', applyFilters);
+      el('familyFilter').addEventListener('change', applyFilters);
+      el('shuffleBtn').addEventListener('click', shuffleShown);
+      el('resetBtn').addEventListener('click', () => {
+        el('search').value = '';
+        el('familyFilter').value = '';
+        applyFilters();
+      });
+      el('backBtn').addEventListener('click', showHome);
+      el('prevBtn').addEventListener('click', () => move(-1));
+      el('nextBtn').addEventListener('click', () => move(1));
+      el('missBtn').addEventListener('click', () => mark('missed'));
+      el('knowBtn').addEventListener('click', () => mark('known'));
+      el('photoPrev').addEventListener('click', () => movePhoto(-1));
+      el('photoNext').addEventListener('click', () => movePhoto(1));
+      document.addEventListener('keydown', event => {
+        if (el('study').style.display !== 'block') return;
+        if (event.key === 'ArrowRight') move(1);
+        if (event.key === 'ArrowLeft') move(-1);
+      });
+    }
+
+    function searchableText(p) {
+      return [p.name, p.common_name, p.family, p.date_added, JSON.stringify(p.traits || {})].join(' ').toLowerCase();
+    }
+
+    function applyFilters() {
+      const query = el('search').value.trim().toLowerCase();
+      const family = el('familyFilter').value;
+      shown = plants.filter(p => {
+        const familyOk = !family || p.family === family;
+        const queryOk = !query || searchableText(p).includes(query);
+        return familyOk && queryOk;
+      });
+      renderGrid();
+      updateStatsDisplay();
+    }
+
+    function shuffleShown() {
+      shown = shown.map(v => [Math.random(), v]).sort((a, b) => a[0] - b[0]).map(v => v[1]);
+      renderGrid();
+    }
+
+    function renderGrid() {
+      const grid = el('grid');
+      grid.innerHTML = '';
+      el('totalCount').textContent = plants.length;
+      el('shownCount').textContent = shown.length;
+      if (shown.length === 0) {
+        grid.innerHTML = '<div class="panel">No plants match this filter.</div>';
+        return;
+      }
+      shown.forEach((plant, index) => {
+        const card = document.createElement('article');
+        card.className = 'plant-card';
+        card.addEventListener('click', () => openPlant(index));
+        const photo = plant.photos[0]?.url || noPhotoSvg('No photo');
+        card.innerHTML = `
+          <img class="thumb" src="${photo}" alt="${plant.name}" onerror="this.src='${noPhotoSvg('Photo unavailable')}'">
+          <div class="body">
+            <div class="sci">${plant.name}</div>
+            <div class="common">${plant.common_name}</div>
+            <span class="tag">${plant.family}</span>
+            <span class="tag">${plant.lepidoptera} Lep hosts</span>
+          </div>`;
+        grid.appendChild(card);
+      });
+    }
+
+    function updateStatsDisplay() {
+      const values = Object.values(stats);
+      el('knownCount').textContent = values.filter(v => v === 'known').length;
+      el('missedCount').textContent = values.filter(v => v === 'missed').length;
+      if (plants.length) {
+        el('totalCount').textContent = plants.length;
+        el('shownCount').textContent = shown.length;
+      }
+    }
+
+    function openPlant(index) {
+      currentIndex = index;
+      photoIndex = 0;
+      el('home').style.display = 'none';
+      el('study').style.display = 'block';
+      renderStudy();
+    }
+
+    function showHome() {
+      el('study').style.display = 'none';
+      el('home').style.display = 'block';
+      renderGrid();
+    }
+
+    function move(delta) {
+      if (!shown.length) return;
+      currentIndex = (currentIndex + delta + shown.length) % shown.length;
+      photoIndex = 0;
+      renderStudy();
+    }
+
+    function movePhoto(delta) {
+      const plant = shown[currentIndex];
+      const photos = plant?.photos || [];
+      if (photos.length < 2) return;
+      photoIndex = (photoIndex + delta + photos.length) % photos.length;
+      renderPhoto(plant);
+    }
+
+    function mark(value) {
+      const plant = shown[currentIndex];
+      if (!plant) return;
+      stats[plant.name] = value;
+      saveStats();
+      move(1);
+    }
+
+    function renderPhoto(plant) {
+      const photos = plant.photos || [];
+      const hero = el('hero');
+      if (photos.length && photos[photoIndex]?.url) {
+        hero.src = photos[photoIndex].url;
+        hero.onerror = () => { hero.src = noPhotoSvg('Photo unavailable'); };
+        el('photoNote').textContent = `Photo ${photoIndex + 1} of ${photos.length}. Attribution: ${photos[photoIndex].attribution || 'Unknown source'}`;
+      } else {
+        hero.src = noPhotoSvg('No photo available');
+        el('photoNote').textContent = 'No photo available for this plant.';
+      }
+    }
+
+    function renderStudy() {
+      const plant = shown[currentIndex];
+      if (!plant) return;
+      el('position').textContent = `${currentIndex + 1} of ${shown.length}`;
+      el('sciName').textContent = plant.name;
+      el('commonName').textContent = plant.common_name;
+      const t = plant.traits || {};
+      el('details').innerHTML = `
+        <div class="detail"><b>Family:</b> ${safeText(plant.family)}</div>
+        <div class="detail"><b>Lepidoptera host count:</b> ${safeText(plant.lepidoptera)}</div>
+        <div class="detail"><b>Date added:</b> ${safeText(plant.date_added)}</div>
+        <div class="detail"><b>Duration:</b> ${safeText(t.duration)}</div>
+        <div class="detail"><b>Habit:</b> ${safeText(t.habit)}</div>
+        <div class="detail"><b>Bloom time:</b> ${safeText(t.bloom_time)}</div>
+        <div class="detail"><b>Bloom color:</b> ${safeText(t.bloom_color)}</div>
+        <div class="detail"><b>Water use:</b> ${safeText(t.water_use)}</div>
+        <div class="detail"><b>Light:</b> ${safeText(t.light_requirement)}</div>
+        <div class="detail"><b>Soil moisture:</b> ${safeText(t.soil_moisture)}</div>
+        <div class="detail"><b>Native habitat:</b> ${safeText(t.native_habitat)}</div>
+        <div class="detail"><b>Wildlife:</b> ${safeText(t.wildlife)}</div>`;
+      renderPhoto(plant);
+    }
+
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
