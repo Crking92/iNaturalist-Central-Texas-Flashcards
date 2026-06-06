@@ -1,0 +1,20 @@
+GITHUB PAGES RESTORE STEPS
+
+1. Open this folder: UPLOAD_TO_GITHUB_ROOT.
+2. Upload the CONTENTS of this folder to the ROOT of the GitHub repository.
+   The repo root must show index.html directly.
+3. Do not upload this folder as a nested folder.
+4. Do not upload the zip file itself.
+5. Confirm the repo has:
+
+   index.html
+   .nojekyll
+   data/daily_data.js
+   data/master_plants.json
+   data/host_numbers.csv
+
+6. In GitHub, go to Settings > Pages.
+7. Make sure Source is set to Deploy from a branch, Branch main, Folder / root.
+8. Wait for the Pages rebuild, then hard-refresh your site.
+
+This index.html includes embedded fallback plant data (509 plants), so the site should still open even if GitHub fails to load data/daily_data.js.
